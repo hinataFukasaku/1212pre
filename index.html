@@ -1,0 +1,119 @@
+---
+title: "プレゼミ1212"
+author: "筆者：深作 輝多"
+date: "更新日:`r format(Sys.time(), '%Y年 %B %d日') ` "
+output:
+  html_document:
+    highlight: zenburn
+    theme: readable
+    toc: yes
+    toc_depth: 4
+---
+
+```{r include = FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      echo = TRUE,
+                      message = FALSE,
+                      cashe = TRUE,
+                      tidy = TRUE,
+                      fig.width = 7,
+                      fig.height = 4)
+```
+
+# ライブラリの読み込み
+```{r}
+library("tidyverse")
+```
+
+# ファイルの読み込み
+```{r}
+df<-read_csv("qog_bas_ts_jan21.csv")
+
+head(df)
+```
+
+## 欠損値の多い変数の確認
+
+
+(寄り道なのでやらなくても良し)
+```{r,eval=FALSE}
+df <- read.csv("qog_bas_ts_jan21.csv", header=T, stringsAsFactors=F, 
+                  na.strings=(c("NA", "")))
+df_2016<-filter(df,year == 2016)
+na_count_df_2016 <- sapply(df_2016, function(y) sum(is.na(y)))
+
+sort(na_count_df_2016,decreasing = F)
+
+```
+
+# データの整形
+データフレームを使う変数だけに
+```{r}
+df2<-select(df,cname,year,wbgi_pve,wdi_acel,bci_bci,wdi_tele)
+summary(df2)
+```
+
+データフレームを使う年数だけに
+```{r}
+df2_2016<-filter(df2,year == 2016)
+```
+
+## 基礎統計
+```{r}
+head(df2_2016)
+```
+
+### summary
+```{r}
+summary(df2_2016)
+```
+
+### describe
+```{r}
+library(psych)
+describeBy(df2_2016)
+```
+
+### skimr
+```{r}
+library(skimr)
+skim(df2_2016)
+```
+
+## 散布図
+```{r}
+plot(df2_2016$wbgi_pve,df2_2016$wdi_acel)
+cor(df2_2016$wbgi_pve,df2_2016$wdi_acel, use = "complete.obs")
+```
+
+
+
+# 回帰分析
+```{r}
+ols1<-lm(df2_2016$wbgi_pve~df2_2016$wdi_acel)
+ols2<-update(ols1,~.+df2_2016$bci_bci)
+ols3<-update(ols2,~.+df2_2016$wdi_tele)
+```
+
+## 回帰分析の出力
+
+```{r 回帰分析の出力}
+library(stargazer)
+stargazer(ols1,ols2,ols3,type="text",
+          dep.var.caption = "",
+          title="タイトル",
+          dep.var.labels=c("従属変数名"),
+          covariate.labels = c("独立変数1",
+                               "統制変数1",
+                               "統制変数2",
+                               "定数"),
+          out="C:/Users/fukasaku/Documents/大学/ゼミ/ファイル名.html")
+```
+
+### 回帰分析のチェック
+
+```{r 回帰分析のチェック}
+#多重共線性の確認 10を超えたらその変数を削除しよう！
+library(car)
+vif(ols3)
+```
